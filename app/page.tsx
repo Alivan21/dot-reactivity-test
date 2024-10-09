@@ -7,7 +7,7 @@
  */
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 type Product = {
   id: number;

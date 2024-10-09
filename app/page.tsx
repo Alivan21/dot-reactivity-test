@@ -31,9 +31,6 @@ const PRODUCTS: Product[] = [
 
 export default function Page() {
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [quantities, setQuantities] = useState<{
-    [id: string]: number | undefined;
-  }>({});
 
   const removeFromCart = useCallback(
     (product: Product) => {
@@ -42,21 +39,9 @@ export default function Page() {
     [cart]
   );
 
-  useEffect(() => {
-    const newQuantities: { [id: string]: number } = {};
-    cart.map((product) => {
-      newQuantities[product.id] = product.quantity;
-    });
-    setQuantities(newQuantities);
+  const totalPrice = useMemo(() => {
+    return cart.reduce((total, product) => total + product.price * product.quantity, 0).toFixed(2);
   }, [cart]);
-
-  const totalPrice = useMemo(
-    () =>
-      cart
-        .reduce((total, product) => total + product.price * (quantities[product.id] || 1), 0)
-        .toFixed(2),
-    [cart, quantities]
-  );
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">

@@ -6,7 +6,8 @@
  * Documentation: https://v0.dev/docs#integrating-generated-code-into-your-nextjs-app
  */
 import { Button } from "@/components/ui/button";
-import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Product = {
   id: number;
@@ -34,25 +35,28 @@ export default function Page() {
     [id: string]: number | undefined;
   }>({});
 
-  const removeFromCart = (product: Product) => {
-    setCart(cart.filter((p) => p.id !== product.id));
-  };
+  const removeFromCart = useCallback(
+    (product: Product) => {
+      setCart(cart.filter((p) => p.id !== product.id));
+    },
+    [cart]
+  );
 
   useEffect(() => {
-    setQuantities(
-      cart.reduce(
-        (acc, product) => ({ ...acc, [product.id]: product.quantity }),
-        {},
-      ),
-    );
+    const newQuantities: { [id: string]: number } = {};
+    cart.map((product) => {
+      newQuantities[product.id] = product.quantity;
+    });
+    setQuantities(newQuantities);
   }, [cart]);
 
-  const totalPrice = cart
-    .reduce(
-      (total, product) => total + product.price * (quantities[product.id] || 1),
-      0,
-    )
-    .toFixed(2);
+  const totalPrice = useMemo(
+    () =>
+      cart
+        .reduce((total, product) => total + product.price * (quantities[product.id] || 1), 0)
+        .toFixed(2),
+    [cart, quantities]
+  );
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -70,10 +74,7 @@ export default function Page() {
             <h2 className="text-lg font-semibold">Cart</h2>
             <div className="mt-4 space-y-4">
               {cart.map((product) => (
-                <div
-                  key={product.id}
-                  className="flex items-center justify-between"
-                >
+                <div key={product.id} className="flex items-center justify-between">
                   <span className="font-semibold">
                     {product.title} x {product.quantity}
                   </span>
@@ -81,11 +82,7 @@ export default function Page() {
                     <p className="text-primary font-bold">
                       ${(product.price * product.quantity).toFixed(2)}
                     </p>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeFromCart(product)}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => removeFromCart(product)}>
                       <XIcon className="w-4 h-4" />
                     </Button>
                   </div>
@@ -95,7 +92,6 @@ export default function Page() {
             <div className="mt-4 flex items-center justify-between">
               <p className="font-semibold">Total:</p>
               <p className="text-primary font-bold">${totalPrice}</p>{" "}
-              {/* Bad practice: expensive calculation in render */}
             </div>
             <Button size="sm" className="w-full mt-4">
               Checkout
@@ -118,14 +114,18 @@ type CardProps = {
 const Card = (props: CardProps) => {
   const [quantity, setQuantity] = useState(1);
 
-  // Bad practice: Logic repeated in event handlers
-  const handleAddToCart = () => {
-    props.onAddToCart({ ...props, quantity });
+  const handleAddToCart = useCallback(() => {
+    props.onAddToCart({ id: props.id, title: props.title, price: props.price, quantity });
+  }, [props, quantity]);
+
+  const handleQuantityChange = (delta: number) => {
+    setQuantity((prev) => Math.max(1, prev + delta));
   };
 
   return (
     <div className="bg-background rounded-lg shadow-lg overflow-hidden">
-      <img
+      <Image
+        priority
         src="/placeholder.svg"
         alt="Product 1"
         width={400}
@@ -142,7 +142,7 @@ const Card = (props: CardProps) => {
               variant="ghost"
               size="icon"
               disabled={props.isAddedToCart}
-              onClick={() => setQuantity((old) => (old <= 1 ? 1 : old - 1))}
+              onClick={() => handleQuantityChange(-1)}
             >
               <MinusIcon className="w-4 h-4" />
             </Button>
@@ -151,16 +151,12 @@ const Card = (props: CardProps) => {
               variant="ghost"
               size="icon"
               disabled={props.isAddedToCart}
-              onClick={() => setQuantity(quantity + 1)}
+              onClick={() => handleQuantityChange(1)}
             >
               <PlusIcon className="w-4 h-4" />
             </Button>
           </div>
-          <Button
-            size="sm"
-            disabled={props.isAddedToCart}
-            onClick={handleAddToCart} // Repeated logic
-          >
+          <Button size="sm" disabled={props.isAddedToCart} onClick={handleAddToCart}>
             Add to Cart
           </Button>
         </div>
